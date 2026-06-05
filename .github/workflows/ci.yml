@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  DATABASE_URL: postgresql://aiops:aiops_secret@localhost:5432/aiops_center?schema=public
+  AUTH_SECRET: ci-test-secret-minimum-32-characters-long
+  ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: aiops
+          POSTGRES_PASSWORD: aiops_secret
+          POSTGRES_DB: aiops_center
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx prisma generate
+      - run: npx prisma db push --accept-data-loss
+      - run: npm run lint
+      - run: npm run test:unit
+      - run: npm run build
+
+  deploy-preview:
+    needs: lint-and-test
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy Preview
+        run: echo "Connect Vercel GitHub integration for automatic preview deployments"
