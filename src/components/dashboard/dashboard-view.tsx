@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   Bell,
   Cloud,
-  Server,
   Shield,
   Zap,
   TrendingUp,
